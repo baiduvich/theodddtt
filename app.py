@@ -25,36 +25,44 @@ class Convert(Resource):
         if format not in ['docx', 'pdf', 'txt']:
             return {'error': 'invalid format'}, 400
 
-        # Create a temporary directory using tempfile
-        with tempfile.TemporaryDirectory() as tmpdirname:
-            # Check if temporary directories are created
-            if not os.path.exists(tmpdirname):
-                return {'error': 'Temp directories were not created!'}, 500
+        try:
+            # Create a temporary directory using tempfile
+            with tempfile.TemporaryDirectory() as tmpdirname:
+                if not os.path.exists(tmpdirname):
+                    return {'error': 'Temp directories were not created!'}, 500
 
-            unique_filename = secure_filename(file.filename)
-            input_file_path = os.path.join(tmpdirname, f'input-{unique_filename}.odt')
-            output_file_path = os.path.join(tmpdirname, f'output-{unique_filename}.{format}')
+                unique_filename = secure_filename(file.filename)
 
-            file.save(input_file_path)
+                input_file_path = os.path.join(tmpdirname, f'input-{unique_filename}.odt')
+                output_file_path = os.path.join(tmpdirname, f'output-{unique_filename}.{format}')
 
-            try:
-                subprocess.run([
-                    'libreoffice',
-                    '--headless',
-                    '--convert-to',
-                    format,
-                    '--outdir',
-                    tmpdirname,
-                    input_file_path
-                ], check=True)
-            except subprocess.CalledProcessError:
-                return {'error': 'conversion failed'}, 500
+                file.save(input_file_path)
 
-            return send_file(
-                output_file_path,
-                as_attachment=True,
-                download_name=f'converted-{unique_filename}.{format}'
-            )
+                try:
+                    subprocess.run([
+                        'libreoffice',
+                        '--headless',
+                        '--convert-to',
+                        format,
+                        '--outdir',
+                        tmpdirname,
+                        input_file_path
+                    ], check=True)
+                except subprocess.CalledProcessError:
+                    return {'error': 'conversion failed'}, 500
+
+                # Check if the output file was successfully created
+                if not os.path.exists(output_file_path):
+                    return {'error': 'output file was not created'}, 500
+
+                # Send the converted file directly to the user
+                return send_file(
+                    output_file_path,
+                    as_attachment=True,
+                    download_name=f'converted-{unique_filename}.{format}'
+                )
+        except Exception as e:
+            return {'error': str(e)}, 500
 
 api.add_resource(Convert, '/convert/<string:format>')
 
