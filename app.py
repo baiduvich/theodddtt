@@ -27,8 +27,11 @@ class Convert(Resource):
 
         # Create a temporary directory using tempfile
         with tempfile.TemporaryDirectory() as tmpdirname:
-            unique_filename = secure_filename(file.filename)
+            # Check if temporary directories are created
+            if not os.path.exists(tmpdirname):
+                return {'error': 'Temp directories were not created!'}, 500
 
+            unique_filename = secure_filename(file.filename)
             input_file_path = os.path.join(tmpdirname, f'input-{unique_filename}.odt')
             output_file_path = os.path.join(tmpdirname, f'output-{unique_filename}.{format}')
 
@@ -47,7 +50,6 @@ class Convert(Resource):
             except subprocess.CalledProcessError:
                 return {'error': 'conversion failed'}, 500
 
-            # Send the converted file directly to the user
             return send_file(
                 output_file_path,
                 as_attachment=True,
