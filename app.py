@@ -24,6 +24,9 @@ def download(filename):
 # RESTful Resource for conversion
 class Convert(Resource):
     def post(self, format):
+        # List of supported formats
+        supported_formats = ['docx', 'pdf', 'txt', 'jpg', 'mhtml', 'rtf', 'png', 'webp', 'xml', 'xps']
+        
         # Check if file is present in the request
         if 'file' not in request.files:
             return {'error': 'file not provided'}, 400
@@ -35,7 +38,7 @@ class Convert(Resource):
             return {'error': 'file not provided'}, 400
 
         # Check for valid conversion format
-        if format not in ['docx', 'pdf', 'txt']:
+        if format not in supported_formats:
             return {'error': 'invalid format'}, 400
 
         try:
