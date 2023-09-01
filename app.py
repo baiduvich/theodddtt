@@ -1,4 +1,4 @@
-from flask import Flask, request, send_file, jsonify
+from flask import Flask, request, send_file, jsonify, url_for
 from flask_restful import Resource, Api
 from werkzeug.utils import secure_filename
 import subprocess
@@ -12,6 +12,10 @@ def delete_file_after_delay(delay, file_path):
 
 app = Flask(__name__)
 api = Api(app)
+
+@app.route('/uploads/<path:filename>', methods=['GET'])
+def download(filename):
+    return send_file(f'/app/uploads/{filename}', as_attachment=True)
 
 class Convert(Resource):
     def post(self, format):
@@ -55,11 +59,12 @@ class Convert(Resource):
                 if not os.path.exists(output_file_path):
                     return {'error': 'output file was not created'}, 500
 
-                return send_file(
-                    output_file_path,
-                    as_attachment=True,
-                    download_name=f'converted-{unique_filename}.{format}'
-                )
+                new_output_path = os.path.join('/app/uploads', f'output-{unique_filename}.{format}')
+                os.rename(output_file_path, new_output_path)
+
+                download_url = url_for('download', filename=f'output-{unique_filename}.{format}')
+
+                return {'message': 'Converted successfully', 'download_url': download_url}, 200
         except subprocess.CalledProcessError:
             return {'error': 'conversion failed'}, 500
 
