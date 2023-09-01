@@ -4,7 +4,11 @@ from werkzeug.utils import secure_filename
 import subprocess
 import os
 import tempfile
+from threading import Timer
 from waitress import serve
+
+def delete_file_after_delay(delay, file_path):
+    Timer(delay, os.remove, [file_path]).start()
 
 app = Flask(__name__)
 api = Api(app)
@@ -26,17 +30,19 @@ class Convert(Resource):
                 if not os.path.exists(tmpdirname):
                     return {'error': 'Temp directories were not created!'}, 500
 
-                unique_filename = secure_filename(file.filename)
+                # Strip original file extension
+                unique_filename = secure_filename(os.path.splitext(file.filename)[0])
+
+                # Create input and output file paths
                 input_file_path = os.path.join(tmpdirname, f'input-{unique_filename}.odt')
-                # Update output_file_path to match the name LibreOffice uses
-                output_file_path = os.path.join(tmpdirname, f'input-{unique_filename}.odt.{format}')
-                
+                output_file_path = os.path.join(tmpdirname, f'input-{unique_filename}.{format}')
+
                 print(f"Debug: Input file path is {input_file_path}")
                 print(f"Debug: Output file path is {output_file_path}")
 
                 file.save(input_file_path)
 
-                libreoffice_command = [
+                subprocess.run([
                     'libreoffice',
                     '--headless',
                     '--convert-to',
@@ -44,14 +50,7 @@ class Convert(Resource):
                     '--outdir',
                     tmpdirname,
                     input_file_path
-                ]
-
-                print(f"Running command: {' '.join(libreoffice_command)}")
-
-                try:
-                    subprocess.run(libreoffice_command, check=True)
-                except subprocess.CalledProcessError:
-                    return {'error': 'conversion failed'}, 500
+                ], check=True)
 
                 if not os.path.exists(output_file_path):
                     return {'error': 'output file was not created'}, 500
@@ -61,9 +60,8 @@ class Convert(Resource):
                     as_attachment=True,
                     download_name=f'converted-{unique_filename}.{format}'
                 )
-        except Exception as e:
-            print(f"An exception occurred: {e}")
-            return {'error': str(e)}, 500
+        except subprocess.CalledProcessError:
+            return {'error': 'conversion failed'}, 500
 
 api.add_resource(Convert, '/convert/<string:format>')
 
