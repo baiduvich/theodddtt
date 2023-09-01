@@ -25,7 +25,7 @@ def download(filename):
 class Convert(Resource):
     def post(self, format):
         # List of supported formats
-        supported_formats = ['docx', 'pdf', 'txt', 'jpg', 'mhtml', 'rtf', 'png', 'webp', 'xml', 'xps']
+        supported_formats = ['docx', 'pdf', 'txt', 'jpg', 'rtf', 'png', 'xml']
         
         # Check if file is present in the request
         if 'file' not in request.files:
