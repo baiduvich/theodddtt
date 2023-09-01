@@ -4,7 +4,6 @@ from werkzeug.utils import secure_filename
 import subprocess
 import os
 import tempfile
-from threading import Timer
 from waitress import serve
 
 app = Flask(__name__)
@@ -29,14 +28,14 @@ class Convert(Resource):
 
                 unique_filename = secure_filename(file.filename)
                 input_file_path = os.path.join(tmpdirname, f'input-{unique_filename}.odt')
-                output_file_path = os.path.join(tmpdirname, f'output-{unique_filename}.{format}')
+                # Update output_file_path to match the name LibreOffice uses
+                output_file_path = os.path.join(tmpdirname, f'input-{unique_filename}.odt.{format}')
                 
-                # Log to debug input_file_path and output_file_path
                 print(f"Debug: Input file path is {input_file_path}")
                 print(f"Debug: Output file path is {output_file_path}")
-                
+
                 file.save(input_file_path)
-                
+
                 libreoffice_command = [
                     'libreoffice',
                     '--headless',
